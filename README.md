@@ -1,10 +1,3 @@
-# ASP.NET API
-Contains dotnet API to get access of todo list from database. Also handles authorization with jwt token of azure ad.
-
-## Run app
-- cd API/ToDoListAPI
-- dotnet run
-
 # React Client
 React SPA developed with vite and typescript. Authentication with azure ad account and it handles the todo list.
 
