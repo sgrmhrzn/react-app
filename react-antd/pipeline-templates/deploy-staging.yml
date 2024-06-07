@@ -1,0 +1,18 @@
+jobs:
+  - deployment: deploy
+    environment: CE-STAGING
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - template: 'replace-tokens.yml'
+            - task: AzureWebApp@1
+              inputs:
+                azureSubscription: 'CoreInteract-STAGING (d5eae540-b469-44a8-839c-be92f72c18af)'
+                appType: 'webAppLinux'
+                appName: 'app-ce-client-staging'
+                deployToSlotOrASE: true
+                resourceGroupName: 'rg-ci-appservice-staging'
+                slotName: ''
+                package: '$(Pipeline.Workspace)/coreengage'
+                startUpCommand: 'pm2 serve /home/site/wwwroot --no-daemon --spa'

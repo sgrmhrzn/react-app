@@ -1,0 +1,18 @@
+jobs:
+  - deployment: deploy
+    environment: CE-UK
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - template: 'replace-tokens.yml'
+            - task: AzureWebApp@1
+              inputs:
+                azureSubscription: 'CoreInteract GERMANY (5a90c645-d11e-4cc7-9304-d67bd93101c1)'
+                appType: 'webAppLinux'
+                appName: 'app-ce-client-uk-prod'
+                deployToSlotOrASE: true
+                resourceGroupName: 'rg-cac-prod'
+                slotName: ''
+                package: '$(Pipeline.Workspace)/coreengage'
+                startUpCommand: 'pm2 serve /home/site/wwwroot --no-daemon --spa'

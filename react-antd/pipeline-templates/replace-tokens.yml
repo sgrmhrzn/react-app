@@ -1,0 +1,15 @@
+steps:
+  - task: replacetokens@4
+    inputs:
+      targetFiles: '$(Pipeline.Workspace)/coreengage/*.js'
+      encoding: 'auto'
+      tokenPattern: 'custom'
+      tokenPrefix: '#{'
+      tokenSuffix: '}#'
+      writeBOM: true
+      actionOnMissing: 'warn'
+      keepToken: false
+      actionOnNoFiles: 'continue'
+      enableTransforms: false
+      useLegacyPattern: false
+      enableTelemetry: true

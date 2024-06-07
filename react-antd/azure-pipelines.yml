@@ -1,0 +1,175 @@
+# Node.js with Angular
+
+trigger:
+  none
+  # - releases/v2/prod
+
+parameters:
+  - name: env
+    displayName: Environment
+    type: string
+    default: DEV
+    values:
+      - DEV
+      - QA
+      - STAGING
+      - PROD-US
+      - PROD-UK
+resources:
+  - repo: self
+
+variables:
+  # Container registry service connection established during pipeline creation
+  - group: Frontend-Pipeline-${{ parameters.env }}
+  # - group: CE-${{ parameters.env }}
+  # - group: CLIENT-Shared
+  - name: imageRepository
+    value: 'react-poc'
+  - name: dockerfilePath
+    value: '**/dockerfile'
+  - name: tag
+    value: $(Build.BuildId)
+  - name: vmImageName
+    value: 'ubuntu-latest'
+  - name: kubernetesServiceConnection
+    value: $[variables.KUBERNETES_SERVICE_CONNECTION]
+  - name: kubernetesServiceConnectionUK
+    value: $[variables.KUBERNETES_SERVICE_CONNECTION_UK]
+  - name: dockerRegistryServiceConnection
+    value: $[variables.REGISTRY_SERVICE_CONNECTION]
+  - name: containerRegistry
+    value: $[variables.CONTAINER_REGISTRY]
+  - name: imagePullSecret
+    value: $[variables.IMAGE_PULL_SECRET]
+  - name: namespace
+    value: $[variables.CLUSTER_NAMESPACE]
+  # - name: env
+  #   value: $[variables.ENVIRONMENT]
+stages:
+  - stage: Build
+    displayName: Build for ${{parameters.env}}
+    jobs:
+      - job: Build
+        displayName: Build React App for ${{parameters.env}}
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - script: |
+              echo respository '$(imageRepository)'
+              echo container registry '$(containerRegistry)'
+              echo namespace '$(namespace)'
+              echo docker registry service connection '$(dockerRegistryServiceConnection)'
+              echo build no '$(tag)'
+              echo kubernetes service connection '$(kubernetesServiceConnection)'
+              echo environment '${{parameters.env}}'
+          - checkout: self
+            fetchDepth: 0
+          # - task: replacetokens@5
+          #   inputs:
+          #     targetFiles: '**/environment.prod.ts,**/deployment.yml, **/service.yml'
+          #     encoding: 'auto'
+          #     tokenPattern: 'custom'
+          #     tokenPrefix: '#{'
+          #     tokenSuffix: '}#'
+          #     writeBOM: true
+          #     actionOnMissing: 'warn'
+          #     keepToken: false
+          #     actionOnNoFiles: 'continue'
+          #     enableTransforms: false
+          #     enableRecursion: false
+          #     useLegacyPattern: false
+          #     enableTelemetry: true
+          - task: UseDotNet@2
+            inputs:
+              packageType: 'sdk'
+              version: '7.0.202'
+          - task: gitversion/setup@0
+            inputs:
+              versionSpec: '2.0.0'
+          - task: gitversion/execute@0
+            inputs:
+              useConfigFile: true
+              configFilePath: './react-antd/GitVersion.yml'
+          - task: Docker@2
+            displayName: Build and push an image to container registry
+            inputs:
+              command: buildAndPush
+              repository: $(imageRepository)
+              dockerfile: $(dockerfilePath)
+              containerRegistry: $(dockerRegistryServiceConnection)
+              tags: |
+                $(tag)
+
+          - upload: manifests
+            artifact: manifests
+
+  # - stage: Deploy
+  #   displayName: Deploy to ${{parameters.env}}
+  #   dependsOn: Build
+  #   jobs:
+  #     - deployment: Deploy
+  #       displayName: Deploy CoreEngage to ${{parameters.env}}
+  #       pool:
+  #         vmImage: $(vmImageName)
+  #       environment: CLIENT-${{ parameters.env }}
+
+  #       strategy:
+  #         runOnce:
+  #           deploy:
+  #             steps:
+  #               - task: KubernetesManifest@0
+  #                 displayName: Create imagePullSecret
+  #                 inputs:
+  #                   action: 'createSecret'
+  #                   secretName: '$(imagePullSecret)'
+  #                   dockerRegistryEndpoint: $(dockerRegistryServiceConnection)
+  #                   namespace: $(namespace)
+  #                   kubernetesServiceConnection: $(kubernetesServiceConnection)
+  #               - task: KubernetesManifest@0
+  #                 displayName: Deploy to Kubernetes cluster
+  #                 inputs:
+  #                   action: deploy
+  #                   manifests: |
+  #                     $(Pipeline.Workspace)/manifests/deployment.yml
+  #                     $(Pipeline.Workspace)/manifests/service.yml
+  #                   imagePullSecrets: |
+  #                     $(imagePullSecret)
+  #                   containers: |
+  #                     $(containerRegistry)/$(imageRepository):$(tag)
+  #                   namespace: $(namespace)
+  #                   kubernetesServiceConnection: $(kubernetesServiceConnection)
+  # - stage: UK_Prod
+  #   displayName: Deploy to UK Production
+  #   dependsOn: US_Prod
+  #   jobs:
+  #     - deployment: Deploy
+  #       displayName: Deploy
+  #       pool:
+  #         vmImage: $(vmImageName)
+  #       environment: $(env)
+
+  #       strategy:
+  #         runOnce:
+  #           deploy:
+  #             steps:
+  #               - task: KubernetesManifest@0
+  #                 displayName: Create imagePullSecret
+  #                 inputs:
+  #                   action: 'createSecret'
+  #                   secretName: '$(imagePullSecret)'
+  #                   dockerRegistryEndpoint: $(dockerRegistryServiceConnection)
+  #                   namespace: $(namespace)
+  #                   kubernetesServiceConnection: $(kubernetesServiceConnectionUK)
+  #               - task: KubernetesManifest@0
+  #                 displayName: Deploy to Kubernetes cluster
+  #                 inputs:
+  #                   action: deploy
+  #                   manifests: |
+  #                     $(Pipeline.Workspace)/manifests/deployment.yml
+  #                     $(Pipeline.Workspace)/manifests/service.yml
+  #                   imagePullSecrets: |
+  #                     $(imagePullSecret)
+  #                   containers: |
+  #                     $(containerRegistry)/$(imageRepository):$(tag)
+  #                   namespace: $(namespace)
+  #                   kubernetesServiceConnection: $(kubernetesServiceConnectionUK)

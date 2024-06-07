@@ -1,0 +1,18 @@
+jobs:
+  - deployment: deploy
+    environment: CE-PROD
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - template: 'replace-tokens.yml'
+            - task: AzureWebApp@1
+              inputs:
+                azureSubscription: 'CoreInteract-PRODUCTION (ca1045f4-e132-4c93-b899-a5ccc21d2ee6)'
+                appType: 'webAppLinux'
+                appName: 'app-ce-client-prod'
+                deployToSlotOrASE: true
+                resourceGroupName: 'rg-ci-appservice-prod'
+                slotName: ''
+                package: '$(Pipeline.Workspace)/coreengage'
+                startUpCommand: 'pm2 serve /home/site/wwwroot --no-daemon --spa'
